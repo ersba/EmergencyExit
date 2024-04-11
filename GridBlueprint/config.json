@@ -1,0 +1,26 @@
+{
+  "globals": {
+    "deltaT": 1,
+    "steps": 50,
+    "output": "csv",
+    "pythonVisualization": true
+  },
+  "layers": [
+    {
+      "name": "GridLayer",
+      "file": "Resources/grid.csv",
+      "pythonVisualization": true
+    }
+  ],
+  "agents": [
+    {
+      "name": "ComplexAgent",
+      "count": 50,
+      "file": "Resources/complex_agent.csv"
+    },
+    {
+      "name": "HelperAgent",
+      "count": 1
+    }
+  ]
+}
