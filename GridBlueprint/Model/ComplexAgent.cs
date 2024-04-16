@@ -98,10 +98,11 @@ public class ComplexAgent : IAgent<GridLayer>, IPositionable
         var newY = Position.Y + nextDirection.Y;
         
         // Check if chosen move is within the bounds of the grid
-        if (0 <= newX && newX < _layer.Width && 0 <= newY && newY < _layer.Height)
+        if (0 <= newX && newX < _layer.Width && 0 <= newY && newY < _layer.Height) 
         {
-            // Check if chosen move goes to a cell that is routable
-            if (_layer.IsRoutable(newX, newY))
+            // Check if chosen move goes to a cell that is routable and is empty
+            if (_layer.IsRoutable(newX, newY) && !_layer.ComplexAgentEnvironment.Explore(Position, radius: 1.0, 
+                    predicate: agent => agent.Position.Equals(new Position(newX, newY))).Any())
             {
                 Position = new Position(newX, newY);
                 _layer.ComplexAgentEnvironment.MoveTo(this, new Position(newX, newY));
@@ -142,18 +143,30 @@ public class ComplexAgent : IAgent<GridLayer>, IPositionable
         if (!_tripInProgress)
         {
             // Explore nearby grid cells based on their values
-            _goal = FindRoutableGoal(MaxTripDistance);
+            Random random = new Random();
+            _goal = new Position(49, random.Next(1, 30));
             _path = _layer.FindPath(Position, _goal).GetEnumerator();
             _tripInProgress = true;
+            _path.MoveNext();
         }
+
         
         if (_path.MoveNext())
         {
-            _layer.ComplexAgentEnvironment.MoveTo(this, _path.Current, 1);
+            if (!_layer.ComplexAgentEnvironment.Explore(Position, AgentExploreRadius,
+                    predicate: agent => agent.Position.Equals(_path.Current)).Any())
+            {
+                _layer.ComplexAgentEnvironment.MoveTo(this, _path.Current, 1);
+            }
+            else
+            {
+                _tripInProgress = false;
+            }
             if (Position.Equals(_goal))
             {
                 Console.WriteLine($"ComplexAgent {ID} reached goal {_goal}");
-                _tripInProgress = false;
+                
+                _goalReached = true;
             }
         }
     }
@@ -257,6 +270,7 @@ public class ComplexAgent : IAgent<GridLayer>, IPositionable
     private bool _tripInProgress;
     private AgentState _state;
     private List<Position>.Enumerator _path;
-
+    private bool _moved = true;
+    private bool _goalReached = false;
     #endregion
 }
