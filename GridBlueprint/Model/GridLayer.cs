@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Mars.Components.Environments;
 using Mars.Components.Layers;
@@ -8,7 +10,7 @@ using Mars.Interfaces.Layers;
 
 namespace GridBlueprint.Model;
 
-public class GridLayer : RasterLayer
+public class GridLayer : RasterLayer, ISteppedActiveLayer
 {
     #region Init
 
@@ -26,6 +28,7 @@ public class GridLayer : RasterLayer
         var initLayer = base.InitLayer(layerInitData, registerAgentHandle, unregisterAgentHandle);
         RuleBasedAgentEnvironment = new SpatialHashEnvironment<RuleBasedAgent>(Width, Height);
         ReinforcementAgentEnvironment = new SpatialHashEnvironment<ReinforcementAgent>(Width, Height);
+        // LoadQTable();
         var agentManager = layerInitData.Container.Resolve<IAgentManager>();
         RuleBasedAgents = agentManager.Spawn<RuleBasedAgent, GridLayer>().ToList();
         ReinforcementAgents = agentManager.Spawn<ReinforcementAgent, GridLayer>().ToList();
@@ -75,5 +78,37 @@ public class GridLayer : RasterLayer
     /// </summary>
     public List<HelperAgent> HelperAgents { get; private set; }
 
+    private void LoadQTable()
+    {
+        var filePath = Path.Combine(Directory.GetParent(Environment.CurrentDirectory).Parent.FullName, 
+            "Resources", "ReinforcementAgentQTable.json");
+        if (File.Exists(filePath))
+        {
+            var json = File.ReadAllText(filePath);
+
+            // var options = new JsonSerializerOptions { WriteIndented = true };
+            //
+            // var jaggedArray = JsonSerializer.Deserialize<double[][]>(json, options);
+            // QTable = ToMultiDimensionalArray(jaggedArray);
+        }
+    }
+
+    public double[,] QTable;
+
     #endregion
+
+    public void Tick()
+    {
+        
+    }
+
+    public void PreTick()
+    {
+        
+    }
+
+    public void PostTick()
+    {
+        
+    }
 }

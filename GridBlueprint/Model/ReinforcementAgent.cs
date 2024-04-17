@@ -39,6 +39,25 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
     /// </summary>
     public void Tick()
     {
+        // When random number is less than epsilon, explore
+        if (_random.NextDouble() < Epsilon)
+        {
+            
+        }
+        // Choose action with highest Q-value
+        else
+        {
+            var numActions = 5; 
+            var maxNextQValue = double.MinValue;
+
+            // for (int nextAction = 0; nextAction < numActions; nextAction++)
+            // {
+            //     maxNextQValue = Math.Max(maxNextQValue, _qTable[nextState, nextAction]);
+            // }
+            //
+            // qValue = qValue + Alpha * (CalculateReward + Gamma * maxNextQValue - qValue);
+            // qTable[state, action] = qValue;
+        }
         _state = AgentState.MoveTowardsGoal;
         
         if (_state == AgentState.MoveRandomly)
@@ -142,8 +161,7 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
         if (!_tripInProgress)
         {
             // Explore nearby grid cells based on their values
-            Random random = new Random();
-            _goal = new Position(49, random.Next(1, 30));
+            _goal = new Position(49, _random.Next(1, 30));
             _path = _layer.FindPath(Position, _goal).GetEnumerator();
             _tripInProgress = true;
             _path.MoveNext();
