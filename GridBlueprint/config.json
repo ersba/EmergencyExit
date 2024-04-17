@@ -14,7 +14,26 @@
   ],
   "agents": [
     {
-      "name": "ComplexAgent",
+      "name": "ReinforcementAgent",
+      "count": 0,
+      "file": "Resources/complex_agent_max_trip_50.csv",
+      "mapping":[
+        {
+          "parameter":"Alpha",
+          "value":0.1
+        },
+        {
+          "parameter":"Gamma",
+          "value":0.9
+        },
+        {
+          "parameter":"Epsilon",
+          "value":0.1
+        }
+      ]
+    },
+    {
+      "name": "RuleBasedAgent",
       "count": 50,
       "file": "Resources/complex_agent_max_trip_50.csv"
     },

@@ -24,9 +24,11 @@ public class GridLayer : RasterLayer
         UnregisterAgent unregisterAgentHandle)
     {
         var initLayer = base.InitLayer(layerInitData, registerAgentHandle, unregisterAgentHandle);
-        ComplexAgentEnvironment = new SpatialHashEnvironment<ComplexAgent>(Width, Height);
+        RuleBasedAgentEnvironment = new SpatialHashEnvironment<RuleBasedAgent>(Width, Height);
+        ReinforcementAgentEnvironment = new SpatialHashEnvironment<ReinforcementAgent>(Width, Height);
         var agentManager = layerInitData.Container.Resolve<IAgentManager>();
-        ComplexAgents = agentManager.Spawn<ComplexAgent, GridLayer>().ToList();
+        RuleBasedAgents = agentManager.Spawn<RuleBasedAgent, GridLayer>().ToList();
+        ReinforcementAgents = agentManager.Spawn<ReinforcementAgent, GridLayer>().ToList();
         HelperAgents = agentManager.Spawn<HelperAgent, GridLayer>().ToList();
 
         return initLayer;
@@ -47,16 +49,26 @@ public class GridLayer : RasterLayer
     #endregion
 
     #region Fields and Properties
+    
+    /// <summary>
+    ///     The environment of the ReinforcementAgent agents
+    /// </summary>
+    public SpatialHashEnvironment<ReinforcementAgent> ReinforcementAgentEnvironment { get; set; }
 
     /// <summary>
-    ///     The environment of the SimpleAgent agents
+    ///     The environment of the RuleBasedAgent agents
     /// </summary>
-    public SpatialHashEnvironment<ComplexAgent> ComplexAgentEnvironment { get; set; }
+    public SpatialHashEnvironment<RuleBasedAgent> RuleBasedAgentEnvironment { get; set; }
+    
+    /// <summary>
+    ///     A collection that holds the ReinforcementAgent instances
+    /// </summary>
+    public List<ReinforcementAgent> ReinforcementAgents { get; private set; }
 
     /// <summary>
-    ///     A collection that holds the SimpleAgent instances
+    ///     A collection that holds the RuleBasedAgent instances
     /// </summary>
-    public List<ComplexAgent> ComplexAgents { get; private set; }
+    public List<RuleBasedAgent> RuleBasedAgents { get; private set; }
 
     /// <summary>
     ///     A collection that holds the HelperAgent instance

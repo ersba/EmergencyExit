@@ -10,7 +10,7 @@ using Mars.Numerics;
 
 namespace GridBlueprint.Model;
 
-public class ComplexAgent : IAgent<GridLayer>, IPositionable
+public class RuleBasedAgent : IAgent<GridLayer>, IPositionable
 {
     #region Init
 
@@ -25,7 +25,7 @@ public class ComplexAgent : IAgent<GridLayer>, IPositionable
         Position = new Position(StartX, StartY);
         _state = AgentState.MoveTowardsGoal;  // Initial state of the agent. Is overwritten eventually in Tick()
         _directions = CreateMovementDirectionsList();
-        _layer.ComplexAgentEnvironment.Insert(this);
+        _layer.RuleBasedAgentEnvironment.Insert(this);
     }
 
     #endregion
@@ -39,25 +39,8 @@ public class ComplexAgent : IAgent<GridLayer>, IPositionable
     /// </summary>
     public void Tick()
     {
-        // Chooses random state if trip is no longer in progress. Comment this out if the agent should keep its initial state.
+        MoveTowardsGoal();
         _state = AgentState.MoveTowardsGoal;
-        
-        if (_state == AgentState.MoveRandomly)
-        {
-            MoveRandomly();
-        }
-        else if (_state == AgentState.MoveWithBearing)
-        {
-            MoveWithBearing();
-        }
-        else if (_state == AgentState.MoveTowardsGoal)
-        {
-            MoveTowardsGoal();
-        }
-        else if (_state == AgentState.ExploreAgents)
-        {
-            ExploreAgents();
-        }
         
         if (_layer.GetCurrentTick() == 595)
         {
@@ -101,11 +84,11 @@ public class ComplexAgent : IAgent<GridLayer>, IPositionable
         if (0 <= newX && newX < _layer.Width && 0 <= newY && newY < _layer.Height) 
         {
             // Check if chosen move goes to a cell that is routable and is empty
-            if (_layer.IsRoutable(newX, newY) && !_layer.ComplexAgentEnvironment.Explore(Position, radius: 1.0, 
+            if (_layer.IsRoutable(newX, newY) && !_layer.RuleBasedAgentEnvironment.Explore(Position, radius: 1.0, 
                     predicate: agent => agent.Position.Equals(new Position(newX, newY))).Any())
             {
                 Position = new Position(newX, newY);
-                _layer.ComplexAgentEnvironment.MoveTo(this, new Position(newX, newY));
+                _layer.RuleBasedAgentEnvironment.MoveTo(this, new Position(newX, newY));
                 Console.WriteLine($"{GetType().Name} moved to a new cell: {Position}");
             }
             else
@@ -127,7 +110,7 @@ public class ComplexAgent : IAgent<GridLayer>, IPositionable
         var goal = FindRoutableGoal();
         var bearing = PositionHelper.CalculateBearingCartesian(Position.X, Position.Y, goal.X, goal.Y);
         var curPos = Position;
-        var newPos = _layer.ComplexAgentEnvironment.MoveTowards(this, bearing, 1);
+        var newPos = _layer.RuleBasedAgentEnvironment.MoveTowards(this, bearing, 1);
         if (!_layer.IsRoutable(newPos))
         {
             Position = curPos;
@@ -153,10 +136,10 @@ public class ComplexAgent : IAgent<GridLayer>, IPositionable
         
         if (_path.MoveNext())
         {
-            if (!_layer.ComplexAgentEnvironment.Explore(Position, AgentExploreRadius,
+            if (!_layer.RuleBasedAgentEnvironment.Explore(Position, AgentExploreRadius,
                     predicate: agent => agent.Position.Equals(_path.Current)).Any())
             {
-                _layer.ComplexAgentEnvironment.MoveTo(this, _path.Current, 1);
+                _layer.RuleBasedAgentEnvironment.MoveTo(this, _path.Current, 1);
             }
             else
             {
@@ -201,7 +184,7 @@ public class ComplexAgent : IAgent<GridLayer>, IPositionable
     private void ExploreAgents()
     {
         // Explore nearby other ComplexAgent instances
-        var agents = _layer.ComplexAgentEnvironment.Explore(Position, radius: AgentExploreRadius);
+        var agents = _layer.RuleBasedAgentEnvironment.Explore(Position, radius: AgentExploreRadius);
 
         foreach (var agent in agents)
         {
@@ -237,7 +220,7 @@ public class ComplexAgent : IAgent<GridLayer>, IPositionable
     private void RemoveFromSimulation()
     {
         Console.WriteLine($"ComplexAgent {ID} is removing itself from the simulation.");
-        _layer.ComplexAgentEnvironment.Remove(this);
+        _layer.RuleBasedAgentEnvironment.Remove(this);
         UnregisterAgentHandle.Invoke(_layer, this);
     }
 
