@@ -39,53 +39,140 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
     /// </summary>
     public void Tick()
     {
-        // When random number is less than epsilon, explore
-        if (_random.NextDouble() < Epsilon)
-        {
-            
-        }
-        // Choose action with highest Q-value
-        else
-        {
-            var numActions = 5; 
-            var maxNextQValue = double.MinValue;
-
-            // for (int nextAction = 0; nextAction < numActions; nextAction++)
-            // {
-            //     maxNextQValue = Math.Max(maxNextQValue, _qTable[nextState, nextAction]);
-            // }
-            //
-            // qValue = qValue + Alpha * (CalculateReward + Gamma * maxNextQValue - qValue);
-            // qTable[state, action] = qValue;
-        }
-        _state = AgentState.MoveTowardsGoal;
         
-        if (_state == AgentState.MoveRandomly)
-        {
-            MoveRandomly();
-        }
-        else if (_state == AgentState.MoveWithBearing)
-        {
-            MoveWithBearing();
-        }
-        else if (_state == AgentState.MoveTowardsGoal)
-        {
-            MoveTowardsGoal();
-        }
-        else if (_state == AgentState.ExploreAgents)
-        {
-            ExploreAgents();
-        }
-        
-        if (_layer.GetCurrentTick() == 595)
-        {
-            RemoveFromSimulation();
-        }
+        CalculateWall();
+        Console.WriteLine(Position.X + " " + Position.Y);
     }
 
     #endregion
 
     #region Methods
+
+    private int CalculateStateID()
+    {
+        int x = (int)Position.X;
+        int y = (int)Position.Y;
+
+        int max_x = _layer.Width;
+
+        int state_id = y * max_x + x;
+        return state_id;
+    }
+
+    private void CalculateWall()
+    {
+        var list = _layer.Explore(Position, 2, -1, cell => cell > 0);
+        Console.WriteLine("break");
+    }
+    
+    private int ChooseAction(double[] actionEstimates)
+    {
+        int length = actionEstimates.Length;
+        double actionEstimate = actionEstimates[0];
+        int num1 = 0;
+        for (int index = 1; index < length; ++index)
+        {
+            if (actionEstimates[index] > actionEstimate)
+            {
+                actionEstimate = actionEstimates[index];
+                num1 = index;
+            }
+        }
+        if (_random.NextDouble() >= Epsilon)
+            return num1;
+        int num2 = _random.Next(length - 1);
+        if (num2 >= num1)
+            ++num2;
+        return num2;
+    }
+    
+    private void PerformAction(int action)
+    {
+        switch (action)
+        {
+            //Gehe zum Ziel
+            case 0:
+                
+                break;
+            //zu Hilfe eilen
+            case 1:
+                
+                break;
+            //kämpfen
+            case 2:
+                
+                break;
+            //fliehen
+            case 3:
+
+                break;
+        }
+    }
+
+    
+    private int CalculateReward(Position _currentState, Position _nextState, Position _goal)
+    {
+        var reward = 0;
+    
+        // Calculate distances from current and next states to the goal
+        var currentDistance = CalculateDistance(_currentState, _goal);
+        var nextDistance = CalculateDistance(_nextState, _goal);
+    
+        // If the agent moved towards the goal
+        if (nextDistance < currentDistance)
+        {
+            reward += 100; // Increase reward for moving towards the goal
+        }
+        // If the agent moved away from the goal
+        else if (nextDistance > currentDistance)
+        {
+            reward -= 100; // Decrease reward for moving away from the goal
+        }
+    
+        // Other conditions
+    
+        // If the agent stayed in the same position
+        if (_currentState.X == _nextState.X && _currentState.Y == _nextState.Y)
+        {
+            reward += 0; // No reward or penalty for staying in the same position
+        }
+    
+        // If the agent's next position is occupied
+        if (_layer.IsRoutable(_nextState.X, _nextState.Y) && _layer.ReinforcementAgentEnvironment.Explore(_nextState,
+                radius: 1.0,
+                predicate: agent => agent.Position.Equals(_nextState)).Any())
+        {
+            reward -= 50; // Penalty for trying to move to an occupied position
+        }
+    
+        // If the agent cannot move due to an obstacle
+        if (!_layer.IsRoutable(_nextState.X, _nextState.Y))
+        {
+            reward -= 100; // Penalty for hitting an obstacle
+        }
+        return reward;
+    }
+// Helper method to calculate the Euclidean distance between two positions
+    private double CalculateDistance(Position position1, Position position2)
+    {
+        int deltaX = (int)(position2.X - position1.X);
+        int deltaY = (int)(position2.Y - position1.Y);
+        return Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+    }
+
+    private void UpdateQTable(int previousState, int chosenAction, int reward, int nextState)
+    {
+        double[] qvalue1 = _qTable[nextState];
+        double num = qvalue1[0];
+        for (int index = 1; index < 4; ++index)
+        {
+            if (qvalue1[index] > num)
+                num = qvalue1[index];
+        }
+        double[] qvalue2 = _qTable[previousState];
+        qvalue2[chosenAction] *= 1.0 - Alpha;
+        qvalue2[chosenAction] += Alpha * (reward + Gamma * num);
+    }
 
     /// <summary>
     ///     Generates a list of eight movement directions that the agent uses for random movement.
@@ -291,7 +378,8 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
     public double AgentExploreRadius { get; set; }
     
     public UnregisterAgent UnregisterAgentHandle { get; set; }
-    
+
+    private Double[][] _qTable;
     private GridLayer _layer;
     private List<Position> _directions;
     private readonly Random _random = new();
