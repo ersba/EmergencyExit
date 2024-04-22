@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using GridBlueprint.Model;
 using Mars.Components.Starter;
+using Mars.Core.Simulation.Entities;
 using Mars.Interfaces.Model;
 
 namespace GridBlueprint;
@@ -25,7 +26,7 @@ internal static class Program
         var starter = SimulationStarter.Start(description, config);
 
         // Run the simulation
-        var handle = starter.Run();
+        SimulationWorkflowState handle = starter.Run();
         
         // Close the program
         Console.WriteLine("Successfully executed iterations: " + handle.Iterations);

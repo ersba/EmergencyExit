@@ -1,7 +1,7 @@
 {
   "globals": {
     "deltaT": 1,
-    "steps": 500,
+    "steps": 1000,
     "output": "csv",
     "pythonVisualization": true
   },
@@ -15,7 +15,7 @@
   "agents": [
     {
       "name": "ReinforcementAgent",
-      "count": 1,
+      "count": 50,
       "file": "Resources/complex_agent.csv",
       "mapping":[
         {
@@ -29,6 +29,14 @@
         {
           "parameter":"Epsilon",
           "value":0.1
+        },
+        {
+          "parameter":"EmergencyExitX",
+          "value":17
+        },
+        {
+          "parameter":"EmergencyExitY",
+          "value":29
         }
       ]
     },

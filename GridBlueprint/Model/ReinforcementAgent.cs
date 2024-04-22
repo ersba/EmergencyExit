@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using Mars.Common;
+using Mars.Common.IO;
 using Mars.Interfaces.Agents;
 using Mars.Interfaces.Annotations;
 using Mars.Interfaces.Environments;
 using Mars.Interfaces.Layers;
 using Mars.Numerics;
+using ServiceStack;
 
 namespace GridBlueprint.Model;
 
@@ -22,11 +26,34 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
     public void Init(GridLayer layer)
     {
         _layer = layer;
+        _goal = new Position(ExitPositionX, ExitPositionY);
+        if (File.Exists(_qTablePath))
+        {
+            var loadedQBytes = LoadFileToByteArrayWithFileStream(_qTablePath);
+            var qObject = ObjectSerialize.DeSerialize(loadedQBytes);
+            _qTable = qObject.ConvertTo<Double[][]>();
+        }
+        else
+        {
+            int numActions = 9;
+            int width = _layer.Width;
+            int height = _layer.Height;
+            int numStates = width * height;
+            _qTable = new double[numStates][];
+            for (int index = 0; index < numStates; ++index)
+                _qTable[index] = new double[numActions];
+            for (int index1 = 0; index1 < numStates; ++index1)
+            {
+                for (int index2 = 0; index2 < numActions; ++index2)
+                    _qTable[index1][index2] = 0;
+            }
+        }
         Position = new Position(StartX, StartY);
-        _state = AgentState.MoveTowardsGoal;  // Initial state of the agent. Is overwritten eventually in Tick()
         _directions = CreateMovementDirectionsList();
+        _currentState = CalculateCurrentState();
         _layer.ReinforcementAgentEnvironment.Insert(this);
     }
+    
 
     #endregion
 
@@ -39,16 +66,101 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
     /// </summary>
     public void Tick()
     {
-        
-        CalculateWall();
-        Console.WriteLine(Position.X + " " + Position.Y);
+        if (_layer.GetCurrentTick() != 1)
+        {
+            _reward = CalculateReward();
+            UpdateQTable(_previousState, _chosenAction, _reward, _currentState);
+        }
+        _chosenAction = ChooseAction(_qTable[_currentState]);
+        _previousPosition = Position;
+        _previousState = _currentState;
+        _previousDirection = _direction;
+        PerformAction(_chosenAction);
+        _currentState = CalculateCurrentState();
+        _goalReached = Position.Equals(_goal);
+        if (Position.Equals(_goal))
+        {
+            _goalReached = !_goalReached;
+        }
+
+        if (_layer.GetCurrentTick() == 1000)
+        {
+            SaveTable();
+        }
+        // Console.WriteLine(Position.X + " " + Position.Y);
     }
 
     #endregion
 
     #region Methods
+    
+    private void SaveTable()
+    {
+        if (StartX != 1 || StartY != 1)
+        {
+            return;
+        }
+        if (File.Exists(_qTablePath)) 
+        {
+            File.Delete(_qTablePath);
+        } 
+        var qBytes = _qTable.Serialize(); 
+        SaveByteArrayToFileWithFileStream(qBytes, _qTablePath);
+    }
+    
+    private DirectionType GetGoalDirection()
+    {
+        var deltaX = _goal.X - Position.X;
+        var deltaY = _goal.Y - Position.Y;
+        if (deltaX > 0)
+        {
+            if (deltaY > 0)
+            {
+                return DirectionType.UpRight;
+            }
+            if (deltaY < 0)
+            {
+                return DirectionType.DownRight;
+            }
+            return DirectionType.Right;
+        }
+        if (deltaX < 0)
+        {
+            if (deltaY > 0)
+            {
+                return DirectionType.UpLeft;
+            }
+            if (deltaY < 0)
+            {
+                return DirectionType.DownLeft;
+            }
+            return DirectionType.Left;
+        }
+        if (deltaY > 0)
+        {
+            return DirectionType.Up;
+        }
+        if (deltaY < 0)
+        {
+            return DirectionType.Down;
+        }
+        return DirectionType.NotSet;
+    } 
+    
+    
+    
+    private byte[] LoadFileToByteArrayWithFileStream(string filePath)
+    {
+        return File.ReadAllBytes(filePath);
+    }
+    
+    private void SaveByteArrayToFileWithFileStream(byte[] data, string filePath)
+    {
+        using var stream = File.Create(filePath);
+        stream.Write(data, 0, data.Length);
+    }
 
-    private int CalculateStateID()
+    private int CalculateCurrentState()
     {
         int x = (int)Position.X;
         int y = (int)Position.Y;
@@ -57,12 +169,6 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
 
         int state_id = y * max_x + x;
         return state_id;
-    }
-
-    private void CalculateWall()
-    {
-        var list = _layer.Explore(Position, 2, -1, cell => cell > 0);
-        Console.WriteLine("break");
     }
     
     private int ChooseAction(double[] actionEstimates)
@@ -90,68 +196,174 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
     {
         switch (action)
         {
-            //Gehe zum Ziel
             case 0:
-                
+                _direction = MovementDirections.North;
                 break;
-            //zu Hilfe eilen
             case 1:
-                
+                _direction = MovementDirections.Northeast;
                 break;
-            //kämpfen
             case 2:
-                
+                _direction = MovementDirections.East;
                 break;
-            //fliehen
             case 3:
-
+                _direction = MovementDirections.Southeast;
                 break;
+
+            case 4:
+                _direction = MovementDirections.South;
+                break;
+
+            case 5:
+                _direction = MovementDirections.Southwest;
+                break;
+
+            case 6:
+                _direction = MovementDirections.West;
+                break;
+
+            case 7:
+                _direction = MovementDirections.Northeast;
+                break;
+
+            case 8:
+                _direction = new Position(0, 0);
+                break;
+            
+        }
+        var newX = Position.X + _direction.X;
+        var newY = Position.Y + _direction.Y;
+        
+        // Check if chosen move is within the bounds of the grid
+        if (0 <= newX && newX < _layer.Width && 0 <= newY && newY < _layer.Height) 
+        {
+            // Check if chosen move goes to a cell that is routable and is empty
+            if (_layer.IsRoutable(newX, newY) && !_layer.ReinforcementAgentEnvironment.Explore(Position, radius: 1.0, 
+                    predicate: agent => agent.Position.Equals(new Position(newX, newY))).Any())
+            {
+                Position = new Position(newX, newY);
+                _layer.ReinforcementAgentEnvironment.MoveTo(this, new Position(newX, newY));
+                Console.WriteLine($"{GetType().Name} moved to a new cell: {Position}");
+            }
+            else
+            {
+                Console.WriteLine($"{GetType().Name} tried to move to a blocked cell: ({newX}, {newY})");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"{GetType().Name} tried to leave the world: ({newX}, {newY})");
         }
     }
 
     
-    private int CalculateReward(Position _currentState, Position _nextState, Position _goal)
+    private int CalculateReward()
     {
         var reward = 0;
-    
+        
         // Calculate distances from current and next states to the goal
-        var currentDistance = CalculateDistance(_currentState, _goal);
-        var nextDistance = CalculateDistance(_nextState, _goal);
+        var previousDistance = CalculateDistance(_previousPosition, _goal);
+        var currentDistance = CalculateDistance(Position, _goal);
     
         // If the agent moved towards the goal
-        if (nextDistance < currentDistance)
+        if (currentDistance < previousDistance && !_goalReached)
         {
             reward += 100; // Increase reward for moving towards the goal
         }
         // If the agent moved away from the goal
-        else if (nextDistance > currentDistance)
+        else if (currentDistance > previousDistance  && !_goalReached)
         {
             reward -= 100; // Decrease reward for moving away from the goal
         }
     
         // Other conditions
     
-        // If the agent stayed in the same position
-        if (_currentState.X == _nextState.X && _currentState.Y == _nextState.Y)
+        // If the agent stayed in the same position TO DO: Check if occupied
+        if (Position.X == _previousPosition.X && Position.Y == _previousPosition.Y)
         {
-            reward += 0; // No reward or penalty for staying in the same position
-        }
-    
-        // If the agent's next position is occupied
-        if (_layer.IsRoutable(_nextState.X, _nextState.Y) && _layer.ReinforcementAgentEnvironment.Explore(_nextState,
-                radius: 1.0,
-                predicate: agent => agent.Position.Equals(_nextState)).Any())
-        {
-            reward -= 50; // Penalty for trying to move to an occupied position
+            reward -= 0; // No reward or penalty for staying in the same position
+                         // Changed to zero for now
         }
     
         // If the agent cannot move due to an obstacle
-        if (!_layer.IsRoutable(_nextState.X, _nextState.Y))
+        if (!_layer.IsRoutable(_previousPosition.X, _previousPosition.Y))
         {
             reward -= 100; // Penalty for hitting an obstacle
         }
+        
+        // If the agent moved towards the goal even though he passed the goal
+        if (currentDistance < previousDistance && _goalReached)
+        {
+            reward -= 100; // Increase reward for moving towards the goal
+        }
+        
+        if (_goalReached && GetOppositeDirections(_previousDirection).Contains(_direction))
+        {
+            reward -= 1000;
+        }
+        
+        if (currentDistance > previousDistance && _goalReached)
+        {
+            reward += 100; // Increase reward for moving towards the goal
+        }
+            
         return reward;
     }
+
+    private List<Position> GetOppositeDirections(Position direction)
+    {
+        // Give me a list of the opposite directions for direction for instance direction MovementDirections.West, should return {MovementDirections.East, MovementDirections.Southeast, MovementDirections.Northeast}
+        var oppositeDirections = new List<Position>();
+        if (direction.Equals(MovementDirections.North))
+        {
+            oppositeDirections.Add(MovementDirections.South);
+            oppositeDirections.Add(MovementDirections.Southwest);
+            oppositeDirections.Add(MovementDirections.Southeast);
+        }
+        else if (direction.Equals(MovementDirections.Northeast))
+        {
+            oppositeDirections.Add(MovementDirections.Southwest);
+            oppositeDirections.Add(MovementDirections.South);
+            oppositeDirections.Add(MovementDirections.West);
+        }
+        else if (direction.Equals(MovementDirections.East))
+        {
+            oppositeDirections.Add(MovementDirections.West);
+            oppositeDirections.Add(MovementDirections.Southwest);
+            oppositeDirections.Add(MovementDirections.Northwest);
+        }
+        else if (direction.Equals(MovementDirections.Southeast))
+        {
+            oppositeDirections.Add(MovementDirections.Northwest);
+            oppositeDirections.Add(MovementDirections.West);
+            oppositeDirections.Add(MovementDirections.North);
+        }
+        else if (direction.Equals(MovementDirections.South))
+        {
+            oppositeDirections.Add(MovementDirections.North);
+            oppositeDirections.Add(MovementDirections.Northwest);
+            oppositeDirections.Add(MovementDirections.Northeast);
+        }
+        else if (direction.Equals(MovementDirections.Southwest))
+        {
+            oppositeDirections.Add(MovementDirections.Northeast);
+            oppositeDirections.Add(MovementDirections.North);
+            oppositeDirections.Add(MovementDirections.East);
+        }
+        else if (direction.Equals(MovementDirections.West))
+        {
+            oppositeDirections.Add(MovementDirections.East);
+            oppositeDirections.Add(MovementDirections.Northeast);
+            oppositeDirections.Add(MovementDirections.Southeast);
+        }
+        else if (direction.Equals(MovementDirections.Northwest))
+        {
+            oppositeDirections.Add(MovementDirections.Southeast);
+            oppositeDirections.Add(MovementDirections.East);
+            oppositeDirections.Add(MovementDirections.South);
+        }
+        return oppositeDirections;
+    }
+    
 // Helper method to calculate the Euclidean distance between two positions
     private double CalculateDistance(Position position1, Position position2)
     {
@@ -191,6 +403,12 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
             MovementDirections.West,
             MovementDirections.Northwest
         };
+    }
+
+    private void MoveNorth()
+    {
+        var newX = Position.X + MovementDirections.North.X;
+        var newY = Position.Y + MovementDirections.North.Y;
     }
     
     /// <summary>
@@ -364,6 +582,14 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
     [PropertyDescription(Name = "Epsilon")]
     // Exploration rate
     public int Epsilon { get; set; }
+    
+    [PropertyDescription(Name = "ExitPositionX")]
+    // Exit position X
+    public int ExitPositionX { get; set; }
+    
+    [PropertyDescription(Name = "ExitPositionY")]
+    // Exit position Y
+    public int ExitPositionY { get; set; }
 
     [PropertyDescription(Name = "StartX")]
     public int StartX { get; set; }
@@ -384,10 +610,20 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
     private List<Position> _directions;
     private readonly Random _random = new();
     private Position _goal;
+    private Position _previousPosition;
     private bool _tripInProgress;
     private AgentState _state;
+    private int _currentState;
     private List<Position>.Enumerator _path;
     private bool _moved = true;
     private bool _goalReached = false;
+    private int _chosenAction;
+    private Position _direction;
+    private int _previousState;
+    private int _reward;
+    private Position _previousDirection;
+    private static Mutex mut = new Mutex();
+    private string _qTablePath = "../../../Resources/ReinforcementAgent_QTable";
+
     #endregion
 }
