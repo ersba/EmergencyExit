@@ -83,7 +83,7 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
             _goalReached = !_goalReached;
         }
 
-        if (_layer.GetCurrentTick() == 1000)
+        if (_layer.GetCurrentTick() == 100)
         {
             SaveTable();
         }
@@ -242,16 +242,16 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
             {
                 Position = new Position(newX, newY);
                 _layer.ReinforcementAgentEnvironment.MoveTo(this, new Position(newX, newY));
-                Console.WriteLine($"{GetType().Name} moved to a new cell: {Position}");
+                // Console.WriteLine($"{GetType().Name} moved to a new cell: {Position}");
             }
             else
             {
-                Console.WriteLine($"{GetType().Name} tried to move to a blocked cell: ({newX}, {newY})");
+                // Console.WriteLine($"{GetType().Name} tried to move to a blocked cell: ({newX}, {newY})");
             }
         }
         else
         {
-            Console.WriteLine($"{GetType().Name} tried to leave the world: ({newX}, {newY})");
+            // Console.WriteLine($"{GetType().Name} tried to leave the world: ({newX}, {newY})");
         }
     }
 
@@ -429,16 +429,16 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
             {
                 Position = new Position(newX, newY);
                 _layer.ReinforcementAgentEnvironment.MoveTo(this, new Position(newX, newY));
-                Console.WriteLine($"{GetType().Name} moved to a new cell: {Position}");
+                // Console.WriteLine($"{GetType().Name} moved to a new cell: {Position}");
             }
             else
             {
-                Console.WriteLine($"{GetType().Name} tried to move to a blocked cell: ({newX}, {newY})");
+                // Console.WriteLine($"{GetType().Name} tried to move to a blocked cell: ({newX}, {newY})");
             }
         }
         else
         {
-            Console.WriteLine($"{GetType().Name} tried to leave the world: ({newX}, {newY})");
+            // Console.WriteLine($"{GetType().Name} tried to leave the world: ({newX}, {newY})");
         }
     }
 
@@ -454,7 +454,7 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
         if (!_layer.IsRoutable(newPos))
         {
             Position = curPos;
-            Console.WriteLine("Rollback");
+            // Console.WriteLine("Rollback");
         }
     }
 
@@ -513,7 +513,7 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
             }
         }
         
-        Console.WriteLine($"New goal: {goal}");
+        // Console.WriteLine($"New goal: {goal}");
         return goal;
     }
 
@@ -529,7 +529,7 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
         {
             if (Distance.Chebyshev(new []{Position.X, Position.Y}, new []{agent.Position.X, agent.Position.Y}) <= 1.0)
             {
-                Console.WriteLine($"ComplexAgent {ID} found another ComplexAgent at {agent.Position}");
+                // Console.WriteLine($"ComplexAgent {ID} found another ComplexAgent at {agent.Position}");
             }
         }
     }
@@ -543,13 +543,13 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
     {
         if (_state == AgentState.MoveTowardsGoal && _tripInProgress)
         {
-            Console.WriteLine("Trip still in progress, so no state change.");
+            // Console.WriteLine("Trip still in progress, so no state change.");
             return AgentState.MoveTowardsGoal;
         }
 
         var agentStates = Enum.GetValues(typeof(AgentState));
         var newState = (AgentState) agentStates.GetValue(_random.Next(agentStates.Length))!;
-        Console.WriteLine($"New state: {newState}");
+        // Console.WriteLine($"New state: {newState}");
         return newState;
     }
 
@@ -558,7 +558,7 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
     /// </summary>
     private void RemoveFromSimulation()
     {
-        Console.WriteLine($"ComplexAgent {ID} is removing itself from the simulation.");
+        // Console.WriteLine($"ComplexAgent {ID} is removing itself from the simulation.");
         _layer.ReinforcementAgentEnvironment.Remove(this);
         UnregisterAgentHandle.Invoke(_layer, this);
     }

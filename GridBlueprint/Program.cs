@@ -22,14 +22,22 @@ internal static class Program
         var file = File.ReadAllText("config.json");
         var config = SimulationConfig.Deserialize(file);
 
-        // Couple model description and simulation configuration
-        var starter = SimulationStarter.Start(description, config);
-
-        // Run the simulation
-        SimulationWorkflowState handle = starter.Run();
-        
-        // Close the program
-        Console.WriteLine("Successfully executed iterations: " + handle.Iterations);
-        starter.Dispose();
+        // // Couple model description and simulation configuration
+        // var starter = SimulationStarter.Start(description, config);
+        //
+        // // Run the simulation
+        // SimulationWorkflowState handle = starter.Run();
+        //
+        // // Close the program
+        // Console.WriteLine("Successfully executed iterations: " + handle.Iterations);
+        // starter.Dispose();
+        for (var i = 1; i <= 700; i++)
+        {
+            var starter = SimulationStarter.Start(description, config);
+            var handle = starter.Run();
+            Console.WriteLine($"\nSuccessfully executed {handle.Iterations} iterations: Game: {i}\n");
+            starter.Dispose();
+            //GC.Collect();
+        }
     }
 }
