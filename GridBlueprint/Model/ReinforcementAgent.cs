@@ -83,7 +83,7 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
             _goalReached = !_goalReached;
         }
 
-        if (_layer.GetCurrentTick() == 100)
+        if (_layer.GetCurrentTick() == 300)
         {
             SaveTable();
         }
@@ -237,7 +237,7 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
         if (0 <= newX && newX < _layer.Width && 0 <= newY && newY < _layer.Height) 
         {
             // Check if chosen move goes to a cell that is routable and is empty
-            if (_layer.IsRoutable(newX, newY) && !_layer.ReinforcementAgentEnvironment.Explore(Position, radius: 1.0, 
+            if (_layer.IsRoutable(newX, newY) && !_layer.ReinforcementAgentEnvironment.Explore(Position, radius: 2.0, 
                     predicate: agent => agent.Position.Equals(new Position(newX, newY))).Any())
             {
                 Position = new Position(newX, newY);
