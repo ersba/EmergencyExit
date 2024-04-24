@@ -187,8 +187,8 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
         if (_random.NextDouble() >= Epsilon)
             return num1;
         int num2 = _random.Next(length - 1);
-        if (num2 >= num1)
-            ++num2;
+        // if (num2 >= num1)
+        //     ++num2;
         return num2;
     }
     
@@ -375,6 +375,7 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
     private void UpdateQTable(int previousState, int chosenAction, int reward, int nextState)
     {
         double[] qvalue1 = _qTable[nextState];
+        // double[] qvalue_old = qvalue1.Copy();
         double num = qvalue1[0];
         for (int index = 1; index < 4; ++index)
         {
@@ -384,6 +385,7 @@ public class ReinforcementAgent : IAgent<GridLayer>, IPositionable
         double[] qvalue2 = _qTable[previousState];
         qvalue2[chosenAction] *= 1.0 - Alpha;
         qvalue2[chosenAction] += Alpha * (reward + Gamma * num);
+        // Console.WriteLine(qvalue1.Equals(qvalue_old));
     }
 
     /// <summary>

@@ -31,7 +31,7 @@ internal static class Program
         // // Close the program
         // Console.WriteLine("Successfully executed iterations: " + handle.Iterations);
         // starter.Dispose();
-        for (var i = 1; i <= 700; i++)
+        for (var i = 1; i <= 1; i++)
         {
             var starter = SimulationStarter.Start(description, config);
             var handle = starter.Run();
